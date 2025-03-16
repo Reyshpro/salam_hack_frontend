@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Platform, StatusBar, SafeAreaView } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import LanguageCard from './components/LanguageCard';
@@ -10,7 +11,18 @@ const languageDescriptions: { [key: string]: string } = {
   cpp: 'لغة برمجة قوية وفعالة. تستخدم في تطوير البرامج عالية الأداء والألعاب وأنظمة التشغيل. مثالية لفهم أساسيات البرمجة وإدارة الذاكرة.',
   python: 'لغة برمجة سهلة التعلم وقوية. مثالية للمبتدئين وتستخدم في تطوير الويب والذكاء الاصطناعي وتحليل البيانات. تتميز بقواعد بسيطة وواضحة.',
   javascript: 'لغة برمجة أساسية لتطوير الويب. تستخدم لإنشاء مواقع تفاعلية وتطبيقات الويب الحديثة. مطلوبة بشدة في سوق العمل.',
-  java: 'لغة برمجة قوية وموثوقة. تستخدم في تطوير تطبيقات الأندرويد والأنظمة المؤسسية. تتميز بإمكانية التشغيل على جميع المنصات.'
+  java: 'لغة برمجة قوية وموثوقة. تستخدم في تطوير تطبيقات الأندرويد والأنظمة المؤسسية. تتميز بإمكانية التشغيل على جميع المنصات.',
+  csharp: 'لغة برمجة متعددة الأغراض من مايكروسوفت. تستخدم في تطوير تطبيقات الويندوز والألعاب باستخدام Unity وتطبيقات الويب.',
+  swift: 'لغة برمجة حديثة من Apple. تستخدم في تطوير تطبيقات iOS وmacOS. تتميز بالأداء العالي والأمان.',
+  kotlin: 'لغة برمجة حديثة متوافقة مع Java. الخيار المفضل لتطوير تطبيقات Android. تتميز بالسلامة والتعبيرية.',
+  php: 'لغة برمجة مفتوحة المصدر لتطوير الويب. تستخدم في إنشاء المواقع الديناميكية وتطبيقات الويب. سهلة التعلم ومدعومة بشكل واسع.',
+  ruby: 'لغة برمجة ديناميكية وبسيطة. مشهورة في تطوير الويب مع إطار Ruby on Rails. تركز على سعادة المطور وإنتاجيته.',
+  typescript: 'نسخة معززة من JavaScript مع إضافة الأنواع. تحسن جودة الكود وقابلية الصيانة. مثالية للمشاريع الكبيرة.',
+  go: 'لغة برمجة من Google تركز على البساطة والكفاءة. مثالية للخدمات السحابية والبرمجة المتزامنة. سريعة وسهلة التعلم.',
+  rust: 'لغة برمجة حديثة تركز على الأمان والأداء. مثالية للبرمجة على مستوى النظام والتطبيقات عالية الأداء.',
+  r: 'لغة برمجة متخصصة في التحليل الإحصائي وعلوم البيانات. قوية في معالجة البيانات والتصور. مدعومة بمكتبات غنية.',
+  dart: 'لغة برمجة من Google لتطوير تطبيقات عبر المنصات. تستخدم مع إطار Flutter لتطوير تطبيقات الموبايل الجميلة.',
+  sql: 'لغة استعلام هيكلية للتعامل مع قواعد البيانات. أساسية لتخزين واسترجاع البيانات. مطلوبة في معظم تطبيقات البرمجة.'
 };
 
 export default function App() {
@@ -96,64 +108,89 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>استعد لاكتشاف عالم البرمجة</Text>
-        <Text style={styles.headerText}>وتطوير مهاراتك بشكل مميز!</Text>
-        <Text style={styles.subHeaderText}>ابدأ مشروع جديد عن طريق الضفط على الزر</Text>
-      </View>
+    <>
+      <StatusBar backgroundColor="#4E7ED1" barStyle="light-content" translucent={true} />
+      <View style={styles.wrapper}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <View style={styles.headerContent}>
+                <Text style={styles.headerText}>استعد لاكتشاف عالم البرمجة</Text>
+                <Text style={styles.headerText}>وتطوير مهاراتك بشكل مميز!</Text>
+                <Text style={styles.subHeaderText}>ابدأ مشروع جديد عن طريق الضفط على الزر</Text>
+              </View>
+            </View>
 
-      <ScrollView style={styles.mainContent} contentContainerStyle={styles.scrollContent}>
-        {languages.length > 0 ? (
-          languages.map((lang) => (
-            <LanguageCard
-              key={lang.language.toLowerCase()}
-              language={lang.language}
-              level={lang.level}
-              description={lang.description}
-              progress={lang.progress}
-              projectProgress={[1, 0, 0, 0, 0]}
-              isActive={true}
-              onDelete={() => handleDeleteLanguage(lang.language)}
-              environment={lang.environment}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>لم تبدأ أي رحلة بعد</Text>
-            <Text style={styles.emptyStateSubText}>اضغط على زر "إبدأ رحلة جديدة" لبدء رحلتك الأولى</Text>
+            <ScrollView style={styles.mainContent} contentContainerStyle={styles.scrollContent}>
+              {languages.length > 0 ? (
+                languages.map((lang) => (
+                  <LanguageCard
+                    key={lang.language.toLowerCase()}
+                    language={lang.language}
+                    level={lang.level}
+                    description={lang.description}
+                    progress={lang.progress}
+                    projectProgress={[
+                      { projectId: 'proj1', completedTasks: 1, totalTasks: 5, isCompleted: false },
+                      { projectId: 'proj2', completedTasks: 0, totalTasks: 5, isCompleted: false },
+                      { projectId: 'proj3', completedTasks: 0, totalTasks: 5, isCompleted: false },
+                      { projectId: 'proj4', completedTasks: 0, totalTasks: 5, isCompleted: false },
+                      { projectId: 'proj5', completedTasks: 0, totalTasks: 5, isCompleted: false }
+                    ]}
+                    isActive={true}
+                    onDelete={() => handleDeleteLanguage(lang.language)}
+                    environment={lang.environment}
+                  />
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>لم تبدأ أي رحلة بعد</Text>
+                  <Text style={styles.emptyStateSubText}>اضغط على زر "إبدأ رحلة جديدة" لبدء رحلتك الأولى</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.bottomButton} onPress={handleStartJourney}>
+              <Text style={styles.buttonText}>+ إبدأ رحلة جديدة</Text>
+            </TouchableOpacity>
           </View>
-        )}
-      </ScrollView>
-
-      <TouchableOpacity style={styles.bottomButton} onPress={handleStartJourney}>
-        <Text style={styles.buttonText}>+ إبدأ رحلة جديدة</Text>
-      </TouchableOpacity>
-    </View>
+        </SafeAreaView>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#4E7ED1',
+  },
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#4E7ED1',
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    marginTop: 0,
   },
   header: {
-    width: width,
-    height: 180,
-    paddingTop: 65,
-    paddingRight: 12,
-    paddingBottom: 20,
-    paddingLeft: 12,
+    width: '100%',
     backgroundColor: '#4E7ED1',
-    justifyContent: 'flex-start',
+    paddingTop: 0,
+  },
+  headerContent: {
+    paddingHorizontal: 12,
+    paddingBottom: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : StatusBar.currentHeight || 0,
   },
   headerText: {
     color: '#fff',
     textAlign: 'right',
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 6,
+    
+    marginBottom: 4,
     fontFamily: Platform.select({ web: 'system-ui', default: undefined }),
   },
   subHeaderText: {

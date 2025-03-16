@@ -5,10 +5,21 @@ import RNPickerSelect from 'react-native-picker-select';
 import { storage } from './utils/storage';
 
 const languages = [
-  { label: 'C++', value: 'cpp' },
   { label: 'Python', value: 'python' },
   { label: 'JavaScript', value: 'javascript' },
+  { label: 'C++', value: 'cpp' },
   { label: 'Java', value: 'java' },
+  { label: 'C#', value: 'csharp' },
+  { label: 'Swift', value: 'swift' },
+  { label: 'Kotlin', value: 'kotlin' },
+  { label: 'PHP', value: 'php' },
+  { label: 'Ruby', value: 'ruby' },
+  { label: 'TypeScript', value: 'typescript' },
+  { label: 'Go', value: 'go' },
+  { label: 'Rust', value: 'rust' },
+  { label: 'R', value: 'r' },
+  { label: 'Dart', value: 'dart' },
+  { label: 'SQL', value: 'sql' },
 ];
 
 const environments = [
@@ -16,6 +27,9 @@ const environments = [
   { label: 'تطوير تطبيقات الموبايل', value: 'mobile' },
   { label: 'تطوير الألعاب', value: 'games' },
   { label: 'علم البيانات والذكاء الاصطناعي', value: 'ai' },
+  { label: 'الأمن السيبراني', value: 'cyber' },
+  { label: 'علم تحليل البيانات', value: 'data' },
+  { label: 'الأنظمة المدمجة وانترنت الأشياء', value: 'embeded' }
 ];
 
 const goals = [
@@ -29,6 +43,14 @@ const levels = [
   { label: 'مبتدئ', value: 'مبتدئ' },
   { label: 'متوسط', value: 'متوسط' },
   { label: 'متقدم', value: 'متقدم' },
+];
+
+const projectProgressData = [
+  { projectId: 'proj1', completedTasks: 3, totalTasks: 5, isCompleted: false },
+  { projectId: 'proj2', completedTasks: 0, totalTasks: 5, isCompleted: false },
+  { projectId: 'proj3', completedTasks: 0, totalTasks: 5, isCompleted: false },
+  { projectId: 'proj4', completedTasks: 0, totalTasks: 5, isCompleted: false },
+  { projectId: 'proj5', completedTasks: 0, totalTasks: 5, isCompleted: false }
 ];
 
 export default function NewJourney() {
@@ -50,6 +72,7 @@ export default function NewJourney() {
       level,
       progress: 0,
       startDate: new Date().toISOString(),
+      projectProgress: projectProgressData,
     };
 
     // Navigate back with the new journey data

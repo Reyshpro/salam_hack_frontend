@@ -1,3 +1,4 @@
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -6,7 +7,12 @@ type LanguageCardProps = {
   level: string;
   description: string;
   progress: number;
-  projectProgress: number[];
+  projectProgress: {
+    projectId: string;
+    completedTasks: number;
+    totalTasks: number;
+    isCompleted: boolean;
+  }[];
   isActive?: boolean;
   onDelete?: () => void;
   environment?: string;
@@ -29,6 +35,16 @@ export default function LanguageCard({
       pathname: '/language-journey',
       params: { language, environment }
     });
+  };
+
+  // Calculate overall progress percentage for the progress line
+  const calculateProgressPercentage = (index: number) => {
+    if (index >= projectProgress.length) return 0;
+    
+    const completedProjects = projectProgress.slice(0, index + 1)
+      .reduce((sum, project) => sum + (project.isCompleted ? 1 : project.completedTasks / project.totalTasks), 0);
+    
+    return (completedProjects / (index + 1)) * 100;
   };
 
   return (
@@ -59,32 +75,67 @@ export default function LanguageCard({
         </View>
       </View>
       <Text style={styles.description}>{description}</Text>
-      <View style={styles.progressContainer}>
-        {[1, 2, 3, 4].map((step, index) => (
-          <View key={step} style={styles.stepContainer}>
-            <View
-              style={[
-                styles.diamond,
-                projectProgress[step - 1] === 1 ? { backgroundColor: '#E4DB2E' } : index < progress ? styles.activeDiamond : styles.inactiveDiamond,
-              ]}
-            />
-            <View
-              style={[
-                styles.line,
-                index < 3 ? styles.lineVisible : styles.lineHidden,
-                index < progress ? styles.activeLine : styles.inactiveLine,
-              ]}
-            />
-          </View>
-        ))}
-        <View style={[styles.diamond, progress >= 4 ? styles.activeDiamond : styles.inactiveDiamond]} />
-      </View>
-      <View style={styles.stepLabels}>
-        <Text style={[styles.stepText, progress >= 0 ? styles.activeText : styles.stepText]}>مشروع 1</Text>
-        <Text style={[styles.stepText, progress >= 1 ? styles.activeText : styles.stepText]}>مشروع 2</Text>
-        <Text style={[styles.stepText, progress >= 2 ? styles.activeText : styles.stepText]}>مشروع 3</Text>
-        <Text style={[styles.stepText, progress >= 3 ? styles.activeText : styles.stepText]}>مشروع 4</Text>
-        <Text style={[styles.stepText, progress >= 4 ? styles.activeText : styles.stepText]}>تخرج</Text>
+      <View style={styles.progressWrapper}>
+        <View style={styles.progressBackground} />
+        <View style={styles.progressContainer}>
+          {[0, 1, 2, 3, 4].map((index) => {
+            const project = projectProgress[index];
+            const isCompleted = project?.isCompleted;
+            const taskProgress = project ? project.completedTasks / project.totalTasks : 0;
+            
+            return (
+              <View key={index} style={styles.stepContainer}>
+                <View
+                  style={[
+                    styles.diamond,
+                    isCompleted ? styles.completedDiamond : 
+                    taskProgress > 0 ? styles.activeDiamond : 
+                    styles.inactiveDiamond,
+                  ]}
+                />
+                {index < 4 && (
+                  <View
+                    style={[
+                      styles.line,
+                      styles.lineBase,
+                      {
+                        backgroundColor: '#E5E5E5',
+                        overflow: 'hidden',
+                      }
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.progressLine,
+                        {
+                          width: `${calculateProgressPercentage(index)}%`,
+                          backgroundColor: '#4E7ED1',
+                        }
+                      ]}
+                    />
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+        <View style={styles.stepLabels}>
+          <Text style={[styles.stepText, projectProgress[0]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
+            مشروع 1{projectProgress[0]?.completedTasks ? ` (${projectProgress[0].completedTasks}/${projectProgress[0].totalTasks})` : ''}
+          </Text>
+          <Text style={[styles.stepText, projectProgress[1]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
+            مشروع 2{projectProgress[1]?.completedTasks ? ` (${projectProgress[1].completedTasks}/${projectProgress[1].totalTasks})` : ''}
+          </Text>
+          <Text style={[styles.stepText, projectProgress[2]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
+            مشروع 3{projectProgress[2]?.completedTasks ? ` (${projectProgress[2].completedTasks}/${projectProgress[2].totalTasks})` : ''}
+          </Text>
+          <Text style={[styles.stepText, projectProgress[3]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
+            مشروع 4{projectProgress[3]?.completedTasks ? ` (${projectProgress[3].completedTasks}/${projectProgress[3].totalTasks})` : ''}
+          </Text>
+          <Text style={[styles.stepText, projectProgress[4]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
+            تخرج{projectProgress[4]?.completedTasks ? ` (${projectProgress[4].completedTasks}/${projectProgress[4].totalTasks})` : ''}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -184,26 +235,47 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontFamily: Platform.select({ web: 'system-ui', default: undefined }),
   },
+  progressWrapper: {
+    marginTop: 8,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+    position: 'relative',
+  },
+  progressBackground: {
+    position: 'absolute',
+    top: 14,
+    left: 24,
+    right: 24,
+    height: 2,
+    backgroundColor: '#E5E5E5',
+    zIndex: 1,
+  },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     height: 30,
-    marginBottom: 12,
-    marginTop: 8,
+    position: 'relative',
+    zIndex: 2,
   },
   stepContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
+    width: 20,
+    position: 'relative',
   },
   diamond: {
     width: 12,
     height: 12,
     transform: [{ rotate: '45deg' }],
-    marginHorizontal: 4,
     borderWidth: 1,
     borderColor: '#4E7ED1',
+    backgroundColor: '#fff',
+    zIndex: 3,
+  },
+  completedDiamond: {
+    backgroundColor: '#E4DB2E',
+    borderColor: '#E4DB2E',
   },
   activeDiamond: {
     backgroundColor: '#4E7ED1',
@@ -213,30 +285,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderColor: '#E5E5E5',
   },
-  line: {
+  lineBase: {
+    position: 'absolute',
     height: 2,
-    flex: 1,
+    left: 20,
+    right: -60,
+    zIndex: 1,
   },
-  lineVisible: {
-    opacity: 1,
+  line: {
+    position: 'absolute',
+    height: 2,
+    left: 10,
+    right: -60,
+    zIndex: 1,
   },
-  lineHidden: {
-    opacity: 0,
-  },
-  activeLine: {
-    backgroundColor: '#4E7ED1',
-  },
-  inactiveLine: {
-    backgroundColor: '#E5E5E5',
+  progressLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
   },
   stepLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
-    marginTop: 4,
+    marginTop: 8,
   },
   stepText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
     textAlign: 'center',
     minWidth: 45,

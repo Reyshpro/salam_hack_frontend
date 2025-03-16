@@ -4,6 +4,9 @@ export interface Task {
   description: string;
   isCompleted: boolean;
   isLocked: boolean;
+  aiHelp?: string;
+  requirements?: string[];
+  hints?: string[];
 }
 
 export interface Project {
@@ -13,6 +16,8 @@ export interface Project {
   tasks: Task[];
   isCompleted: boolean;
   isLocked: boolean;
+  aiContext?: string;
+  learningObjectives?: string[];
 }
 
 export interface Language {
@@ -31,13 +36,19 @@ export interface UserProgress {
   currentTaskId: string | null;
   completedProjects: string[];
   completedTasks: string[];
+  lastCompletedAt?: string;
 }
 
 export interface AIGeneratedContent {
   projectName: string;
   projectDescription: string;
+  aiContext: string;
+  learningObjectives: string[];
   tasks: {
     title: string;
     description: string;
+    aiHelp: string;
+    requirements: string[];
+    hints: string[];
   }[];
 }

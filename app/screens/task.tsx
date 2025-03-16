@@ -8,6 +8,7 @@ import {
   TextInput,
   Platform,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -17,40 +18,22 @@ import { apiService } from '../services/api';
 export default function Task() {
   const { languageId, projectId, taskId } = useLocalSearchParams();
   const [solution, setSolution] = useState('');
-  const [hints, setHints] = useState<string[]>([]);
+  const [showHelp, setShowHelp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showHints, setShowHints] = useState(false);
 
   const language = useAppStore((state) =>
     state.languages.find((l) => l.id === languageId)
   );
   const project = language?.projects.find((p) => p.id === projectId);
   const task = project?.tasks.find((t) => t.id === taskId);
+  const nextProject = language?.projects.find(p => !p.isCompleted && p.id !== projectId);
 
   const completeTask = useAppStore((state) => state.completeTask);
   const completeProject = useAppStore((state) => state.completeProject);
 
-  useEffect(() => {
-    if (!task || !language || !project) {
-      router.replace('/');
-      return;
-    }
-
-    loadHints();
-  }, [task, language, project]);
-
-  const loadHints = async () => {
-    try {
-      const taskHints = await apiService.getProjectHints(
-        language?.name || '',
-        projectId as string,
-        taskId as string
-      );
-      setHints(taskHints);
-    } catch (error) {
-      console.error('Error loading hints:', error);
-    }
-  };
+  const { width, height } = useWindowDimensions();
+  const isSmallScreen = width < 375;
+  const isLargeScreen = width >= 768;
 
   const handleSubmit = async () => {
     if (!solution.trim()) {
@@ -75,44 +58,50 @@ export default function Task() {
           taskId as string
         );
 
-        // Check if all tasks in the project are completed
         const allTasksCompleted = project?.tasks.every(
           (t) => t.isCompleted || t.id === taskId
         );
 
         if (allTasksCompleted) {
           completeProject(languageId as string, projectId as string);
-          Alert.alert(
-            'تهانينا!',
-            'لقد أكملت جميع مهام هذا المشروع. يمكنك الآن الانتقال إلى المشروع التالي.',
-            [
-              {
-                text: 'حسناً',
-                onPress: () => router.replace('/project'),
-              },
-            ]
-          );
+          
+          // If there's a next project, navigate to it
+          if (nextProject) {
+            router.replace({
+              pathname: "/screens/project",
+              params: { 
+                languageId, 
+                projectId: nextProject.id,
+                autoStart: 'true' // Indicate this is an automatic navigation
+              }
+            });
+          } else {
+            Alert.alert(
+              'تهانينا!',
+              'لقد أكملت جميع المشاريع في هذه اللغة!',
+              [
+                {
+                  text: 'العودة للصفحة الرئيسية',
+                  onPress: () => router.push('/'),
+                },
+              ]
+            );
+          }
         } else {
-          Alert.alert('أحسنت!', feedback, [
-            {
-              text: 'المهمة التالية',
-              onPress: () => {
-                const nextTask = project?.tasks.find(
-                  (t) => !t.isCompleted && t.id !== taskId
-                );
-                if (nextTask) {
-                  router.replace({
-                    pathname: '/task',
-                    params: {
-                      languageId,
-                      projectId,
-                      taskId: nextTask.id,
-                    },
-                  });
-                }
+          const nextTask = project?.tasks.find(
+            (t) => !t.isCompleted && t.id !== taskId
+          );
+          
+          if (nextTask) {
+            router.replace({
+              pathname: "/screens/task",
+              params: {
+                languageId,
+                projectId,
+                taskId: nextTask.id,
               },
-            },
-          ]);
+            });
+          }
         }
       } else {
         Alert.alert(
@@ -135,24 +124,32 @@ export default function Task() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? height * 0.06 : height * 0.04 }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => router.push({
+            pathname: '/screens/project',
+            params: { languageId, projectId }
+          })}
           style={styles.backButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <MaterialIcons
             name={Platform.OS === 'ios' ? 'chevron-left' : 'arrow-back'}
-            size={24}
+            size={isSmallScreen ? 20 : 24}
             color="#fff"
           />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{task.title}</Text>
+        <Text style={[styles.headerTitle, isSmallScreen && styles.smallHeaderTitle]}>
+          {task.title}
+        </Text>
       </View>
 
       <ScrollView
         style={styles.content}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          isLargeScreen && styles.largeScreenContent
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.taskInfo}>
@@ -164,27 +161,29 @@ export default function Task() {
 
         <Text style={styles.description}>{task.description}</Text>
 
+        {task?.requirements && (
+          <View style={styles.requirementsContainer}>
+            <Text style={styles.requirementsTitle}>المتطلبات:</Text>
+            {task.requirements.map((req, index) => (
+              <Text key={index} style={styles.requirementItem}>• {req}</Text>
+            ))}
+          </View>
+        )}
+
         <TouchableOpacity
-          style={styles.hintsButton}
-          onPress={() => setShowHints(!showHints)}
+          style={styles.helpButton}
+          onPress={() => setShowHelp(!showHelp)}
         >
-          <MaterialIcons
-            name={showHints ? 'lightbulb' : 'lightbulb-outline'}
-            size={24}
-            color="#4E7ED1"
-          />
-          <Text style={styles.hintsButtonText}>
-            {showHints ? 'إخفاء التلميحات' : 'عرض التلميحات'}
+          <Text style={styles.helpButtonText}>
+            {showHelp ? 'إخفاء المساعدة' : 'طلب مساعدة'}
           </Text>
         </TouchableOpacity>
 
-        {showHints && (
-          <View style={styles.hintsContainer}>
-            {hints.map((hint, index) => (
-              <View key={index} style={styles.hintItem}>
-                <MaterialIcons name="tips-and-updates" size={20} color="#4E7ED1" />
-                <Text style={styles.hintText}>{hint}</Text>
-              </View>
+        {showHelp && task?.aiHelp && (
+          <View style={styles.helpContainer}>
+            <Text style={styles.helpText}>{task.aiHelp}</Text>
+            {task.hints && task.hints.map((hint, index) => (
+              <Text key={index} style={styles.hintText}>💡 {hint}</Text>
             ))}
           </View>
         )}
@@ -193,23 +192,21 @@ export default function Task() {
           <Text style={styles.solutionLabel}>الحل:</Text>
           <TextInput
             style={styles.solutionInput}
+            multiline
             value={solution}
             onChangeText={setSolution}
-            placeholder="اكتب حلك هنا..."
-            placeholderTextColor="#999"
-            multiline
-            textAlign="right"
+            placeholder="اكتب الحل هنا..."
             textAlignVertical="top"
           />
         </View>
 
         <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={isSubmitting}
         >
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'جاري التحقق...' : 'تقديم الحل'}
+            {isSubmitting ? 'جاري التحقق...' : 'تحقق من الحل'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -224,7 +221,6 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#4E7ED1',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 20,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -241,21 +237,35 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'right',
   },
+  smallHeaderTitle: {
+    fontSize: 16,
+  },
   content: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: 16,
     paddingBottom: 40,
+  },
+  largeScreenContent: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   taskInfo: {
     flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   projectTitle: {
-    fontSize: 28,
+    fontSize: Platform.select({
+      ios: 28,
+      android: 24,
+      default: 28,
+    }),
     fontWeight: 'bold',
     color: '#4E7ED1',
     flex: 1,
@@ -270,52 +280,105 @@ const styles = StyleSheet.create({
   },
   levelText: {
     color: '#666',
-    fontSize: 14,
+    fontSize: Platform.select({
+      ios: 14,
+      android: 13,
+      default: 14,
+    }),
   },
   description: {
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 15,
+      default: 16,
+    }),
     color: '#333',
     lineHeight: 24,
     textAlign: 'right',
     marginBottom: 24,
   },
-  hintsButton: {
+  helpButton: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
     padding: 12,
     borderRadius: 8,
     backgroundColor: '#f8f9fa',
     marginBottom: 16,
+    marginHorizontal: 4,
   },
-  hintsButtonText: {
+  helpButtonText: {
     color: '#4E7ED1',
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 15,
+      default: 16,
+    }),
     marginRight: 8,
     fontWeight: '600',
   },
-  hintsContainer: {
-    marginBottom: 24,
-  },
-  hintItem: {
-    flexDirection: 'row-reverse',
-    alignItems: 'center',
+  helpContainer: {
     backgroundColor: '#f8f9fa',
-    padding: 12,
+    padding: 16,
     borderRadius: 8,
-    marginBottom: 8,
+    marginBottom: 24,
+    marginHorizontal: 4,
+  },
+  helpText: {
+    fontSize: Platform.select({
+      ios: 14,
+      android: 13,
+      default: 14,
+    }),
+    color: '#333',
+    lineHeight: 20,
+    marginBottom: 16,
+    textAlign: 'right',
   },
   hintText: {
-    flex: 1,
-    fontSize: 14,
+    fontSize: Platform.select({
+      ios: 14,
+      android: 13,
+      default: 14,
+    }),
     color: '#666',
-    marginRight: 12,
+    marginBottom: 8,
+    textAlign: 'right',
+  },
+  requirementsContainer: {
+    marginBottom: 24,
+    marginHorizontal: 4,
+  },
+  requirementsTitle: {
+    fontSize: Platform.select({
+      ios: 16,
+      android: 15,
+      default: 16,
+    }),
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+    textAlign: 'right',
+  },
+  requirementItem: {
+    fontSize: Platform.select({
+      ios: 14,
+      android: 13,
+      default: 14,
+    }),
+    color: '#666',
+    marginBottom: 4,
     textAlign: 'right',
   },
   solutionContainer: {
     marginBottom: 24,
+    marginHorizontal: 4,
   },
   solutionLabel: {
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 15,
+      default: 16,
+    }),
     color: '#333',
     marginBottom: 8,
     textAlign: 'right',
@@ -327,7 +390,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     padding: 12,
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 15,
+      default: 16,
+    }),
     minHeight: 150,
     textAlign: 'right',
     color: '#333',
@@ -335,8 +402,13 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#4E7ED1',
     borderRadius: 8,
-    padding: 16,
+    padding: Platform.select({
+      ios: 16,
+      android: 14,
+      default: 16,
+    }),
     alignItems: 'center',
+    marginHorizontal: 4,
     ...Platform.select({
       ios: {
         shadowColor: '#4E7ED1',
@@ -352,12 +424,16 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  disabledButton: {
+  submitButtonDisabled: {
     opacity: 0.7,
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Platform.select({
+      ios: 16,
+      android: 15,
+      default: 16,
+    }),
     fontWeight: 'bold',
   },
 });
