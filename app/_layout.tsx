@@ -1,39 +1,42 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Platform, ViewStyle, StatusBar, SafeAreaView } from 'react-native';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+const containerStyle: ViewStyle = {
+  flex: 1,
+  backgroundColor: '#fff',
+  ...Platform.select({
+    android: {
+      paddingTop: StatusBar.currentHeight,
+    },
+    ios: {
+      paddingTop: 0,
+    },
+    default: {
+      paddingTop: 0,
+    }
+  }),
+};
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#4E7ED1' }}>
+      <StatusBar 
+        barStyle={Platform.OS === 'ios' ? 'light-content' : 'dark-content'} 
+        backgroundColor="#4E7ED1" 
+      />
+      <Stack 
+        screenOptions={{
+          headerShown: false,
+          contentStyle: containerStyle,
+          animation: Platform.select({
+            ios: 'default',
+            android: 'fade',
+            default: 'none'
+          }),
+        }}
+      >
+        <Stack.Screen name="index" />
       </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    </SafeAreaView>
   );
 }
