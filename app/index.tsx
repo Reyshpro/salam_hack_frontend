@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import LanguageCard from './components/LanguageCard';
 import { storage, Language, Journey } from './utils/storage';
+import { displayLearnings, Learning } from './services/api/test';
 
 const { width } = Dimensions.get('window');
 
@@ -26,9 +27,11 @@ const languageDescriptions: { [key: string]: string } = {
 };
 
 export default function App() {
+  
   const [languages, setLanguages] = useState<Language[]>([]);
   const [isAddingLanguage, setIsAddingLanguage] = useState(false);
   const params = useLocalSearchParams<{ newJourney?: string }>();
+  const [learningData, setLearningData] = useState<Learning[] | null>(null);
 
   // Load saved languages on mount
   useEffect(() => {
@@ -42,6 +45,28 @@ export default function App() {
     };
     loadSavedLanguages();
   }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // setIsLoading(true);
+        // Load learning data
+        const data = await displayLearnings('55');
+        setLearningData(data || null);
+        
+        // Load saved languages
+        const savedLanguages = await storage.getLanguages();
+        setLanguages(savedLanguages);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        // setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+
 
   // Handle adding new language
   useEffect(() => {
@@ -122,14 +147,14 @@ export default function App() {
             </View>
 
             <ScrollView style={styles.mainContent} contentContainerStyle={styles.scrollContent}>
-              {languages.length > 0 ? (
-                languages.map((lang) => (
+              {learningData ? (
+                learningData.map((lang) => (
                   <LanguageCard
                     key={lang.language.toLowerCase()}
                     language={lang.language}
                     level={lang.level}
                     description={lang.description}
-                    progress={lang.progress}
+                    progress={1} 
                     projectProgress={[
                       { projectId: 'proj1', completedTasks: 1, totalTasks: 5, isCompleted: false },
                       { projectId: 'proj2', completedTasks: 0, totalTasks: 5, isCompleted: false },
@@ -139,7 +164,7 @@ export default function App() {
                     ]}
                     isActive={true}
                     onDelete={() => handleDeleteLanguage(lang.language)}
-                    environment={lang.environment}
+                    environment={lang.framework}
                   />
                 ))
               ) : (
