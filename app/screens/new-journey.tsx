@@ -33,6 +33,16 @@ const levels = [
   { label: 'متقدم', value: 'Advanced' },
 ];
 
+const goals = [
+  { label: 'أهدف إلى التخصص في تطوير الويب', value: 'web_development' },
+  { label: 'أهدف إلى التخصص في تطوير تطبيقات الموبايل', value: 'mobile_development' },
+  { label: 'أهدف إلى التخصص في تطوير الألعاب', value: 'game_development' },
+  { label: 'أهدف إلى التخصص في علم البيانات والذكاء الاصطناعي', value: 'ai_data_science' },
+  { label: 'أهدف إلى التخصص في الأمن السيبراني', value: 'cybersecurity' },
+  { label: 'أهدف إلى التخصص في تحليل البيانات', value: 'data_analysis' },
+  { label: 'أهدف إلى التخصص في الأنظمة المدمجة وإنترنت الأشياء', value: 'iot_embedded' },
+];
+
 export default function NewJourney() {
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [selectedEnvironment, setSelectedEnvironment] = useState('');
@@ -86,7 +96,7 @@ export default function NewJourney() {
         name: selectedLanguage === 'cpp' ? 'C++' : selectedLanguage,
         environment: selectedEnvironment,
         goal,
-        level: selectedLevel,
+        level: selectedLevel as 'Beginner' | 'Intermediate' | 'Advanced',
         projects: initialProjects,
         progress: 0,
         createdAt: new Date().toISOString(),
@@ -198,17 +208,24 @@ export default function NewJourney() {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>ما هو هدفك من تعلم البرمجة؟</Text>
-          <TextInput
-            style={styles.input}
-            value={goal}
-            onChangeText={setGoal}
-            placeholder="مثال: تطوير تطبيقات الويب"
-            placeholderTextColor="#999"
-            multiline
-            textAlign="right"
-            textAlignVertical="top"
-          />
+          <Text style={styles.label}>اختر هدفك من تعلم البرمجة</Text>
+          <View style={styles.pickerContainer}>
+            <Picker
+              selectedValue={goal}
+              onValueChange={(itemValue) => setGoal(itemValue)}
+              style={styles.picker}
+              mode="dropdown"
+            >
+              <Picker.Item label="اختر هدفك" value="" />
+              {goals.map((g) => (
+                <Picker.Item
+                  key={g.value}
+                  label={g.label}
+                  value={g.value}
+                />
+              ))}
+            </Picker>
+          </View>
         </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}

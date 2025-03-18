@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -8,72 +8,95 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Task } from '../types';
+import SkeletonLoader from './SkeletonLoader';
+import HelpPopup from './HelpPopup';
+import { generateTaskHelp } from '../services/ai/helpGenerator';
 
 interface TaskCardProps {
   task: Task;
   onPress: () => void;
   isLocked?: boolean;
   isActive?: boolean;
+  isLoading?: boolean;
+  languageId: string;
 }
 
-export default function TaskCard({ 
-  task, 
-  onPress, 
-  isLocked, 
-  isActive 
+export default function TaskCard({
+  task,
+  onPress,
+  isLocked = false,
+  isActive = false,
+  isLoading = false,
+  languageId,
 }: TaskCardProps) {
+  const [showHelp, setShowHelp] = useState(false);
+  const [helpText, setHelpText] = useState('');
+  const [isGeneratingHelp, setIsGeneratingHelp] = useState(false);
+
+  const handleHelpPress = async () => {
+    setShowHelp(true);
+    setIsGeneratingHelp(true);
+    try {
+      const help = await generateTaskHelp(task, languageId);
+      setHelpText(help);
+    } catch (error) {
+      setHelpText('عذراً، حدث خطأ أثناء توليد المساعدة. يرجى المحاولة مرة أخرى.');
+    } finally {
+      setIsGeneratingHelp(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <View style={styles.loadingContent}>
+          <SkeletonLoader width={200} height={24} style={styles.titleSkeleton} />
+          <SkeletonLoader width={300} height={16} style={styles.descriptionSkeleton} />
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isLocked}
-      style={[
-        styles.container,
-        isLocked && styles.lockedContainer,
-        isActive && styles.activeContainer,
-      ]}
-      activeOpacity={0.7}
-    >
-      <View style={styles.content}>
-        {isLocked ? (
-          <>
-            <MaterialIcons 
-              name="lock-outline" 
-              size={24} 
-              color="#666" 
-              style={styles.lockIcon} 
-            />
-            <Text style={styles.lockText}>
-              الرجاء اتمام المهمة السابقة
-            </Text>
-          </>
-        ) : (
-          <>
-            <View style={styles.header}>
-              <Text style={styles.title}>{task.title}</Text>
+    <>
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={isLocked}
+        style={[
+          styles.container,
+          isLocked && styles.lockedContainer,
+          isActive && styles.activeContainer,
+        ]}
+      >
+        <View style={styles.content}>
+          <View style={styles.mainContent}>
+            <Text style={styles.title}>{task.title}</Text>
+            <Text style={styles.description}>{task.description}</Text>
+          </View>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={handleHelpPress}
+              style={styles.helpButton}
+              disabled={isLocked}
+            >
+              <MaterialIcons name="help-outline" size={24} color="#4E7ED1" />
+            </TouchableOpacity>
+            <View style={styles.checkbox}>
               {task.isCompleted && (
-                <MaterialIcons 
-                  name="check-circle" 
-                  size={24} 
-                  color="#4E7ED1" 
-                  style={styles.checkIcon} 
-                />
+                <MaterialIcons name="check-circle" size={24} color="#4E7ED1" />
               )}
             </View>
-            <Text style={styles.description}>{task.description}</Text>
-            {isActive && (
-              <TouchableOpacity 
-                style={styles.startButton}
-                onPress={onPress}
-              >
-                <Text style={styles.buttonText}>
-                  {task.isCompleted ? 'مراجعة المهمة' : 'ابدأ المهمة'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </>
-        )}
-      </View>
-    </TouchableOpacity>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      <HelpPopup
+        isVisible={showHelp}
+        onClose={() => setShowHelp(false)}
+        isLoading={isGeneratingHelp}
+        helpText={helpText}
+      />
+    </>
   );
 }
 
@@ -81,106 +104,77 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
+    padding: 16,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#eee',
-    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 3,
+        elevation: 2,
       },
       default: {
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
       },
     }),
   },
-  lockedContainer: {
-    backgroundColor: '#F5F5F5',
+  loadingContainer: {
+    backgroundColor: '#fff',
   },
-  activeContainer: {
-    borderColor: '#4E7ED1',
-    borderWidth: 2,
+  loadingContent: {
+    padding: 16,
+  },
+  titleSkeleton: {
+    marginBottom: 8,
+  },
+  descriptionSkeleton: {
+    marginBottom: 8,
   },
   content: {
-    padding: 20,
-  },
-  header: {
-    flexDirection: 'row-reverse',
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
+  },
+  mainContent: {
+    flex: 1,
+    marginRight: 16,
   },
   title: {
-    flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
+    marginBottom: 8,
     textAlign: 'right',
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-      default: 'system-ui',
-    }),
   },
   description: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 22,
+    lineHeight: 20,
     textAlign: 'right',
-    marginBottom: 16,
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-      default: 'system-ui',
-    }),
   },
-  lockIcon: {
-    alignSelf: 'center',
-    marginBottom: 8,
-  },
-  checkIcon: {
-    marginLeft: 12,
-  },
-  lockText: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-  },
-  startButton: {
-    backgroundColor: '#4E7ED1',
-    borderRadius: 8,
-    padding: 12,
+  actions: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#4E7ED1',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 3,
-      },
-      default: {
-        boxShadow: '0 2px 4px rgba(78, 126, 209, 0.2)',
-      },
-    }),
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: Platform.select({
-      ios: 'System',
-      android: 'Roboto',
-      default: 'system-ui',
-    }),
+  helpButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockedContainer: {
+    backgroundColor: '#f5f5f5',
+  },
+  activeContainer: {
+    backgroundColor: '#f8f9fa',
   },
 });

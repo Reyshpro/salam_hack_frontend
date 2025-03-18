@@ -1,9 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Language } from '../types';
+import ProjectCard from './ProjectCard';
+import useAppStore from '../store/useAppStore';
 
 type LanguageCardProps = {
-  language: string;
+  language: Language;
   level: string;
   description: string;
   progress: number;
@@ -16,6 +20,7 @@ type LanguageCardProps = {
   isActive?: boolean;
   onDelete?: () => void;
   environment?: string;
+  isLocked?: boolean;
 };
 
 export default function LanguageCard({ 
@@ -26,118 +31,97 @@ export default function LanguageCard({
   projectProgress,
   isActive = false, 
   onDelete,
-  environment 
+  environment,
+  isLocked
 }: LanguageCardProps) {
   const router = useRouter();
+  const completeProject = useAppStore((state) => state.completeProject);
+  const completedProjects = projectProgress.filter(project => project.isCompleted).length;
+  const totalProjects = projectProgress.length;
+  const progressPercentage = (completedProjects / totalProjects) * 100;
 
   const handlePress = () => {
     router.push({
       pathname: '/language-journey',
-      params: { language, environment }
+      params: { language: language.name, environment }
     });
   };
 
-  // Calculate overall progress percentage for the progress line
-  const calculateProgressPercentage = (index: number) => {
-    if (index >= projectProgress.length) return 0;
-    
-    const completedProjects = projectProgress.slice(0, index + 1)
-      .reduce((sum, project) => sum + (project.isCompleted ? 1 : project.completedTasks / project.totalTasks), 0);
-    
-    return (completedProjects / (index + 1)) * 100;
+  const handleProjectPress = (projectId: string) => {
+    if (!isLocked) {
+      completeProject(language.id, projectId);
+    }
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={handlePress} activeOpacity={0.7}>
-      <View style={styles.header}>
-        <View style={styles.levelGroup}>
-          {onDelete && (
-            <TouchableOpacity 
-              style={styles.deleteButton} 
-              onPress={onDelete}
-              accessibilityLabel="حذف اللغة"
-            >
-              <Text style={styles.deleteIcon}>×</Text>
-            </TouchableOpacity>
-          )}
-          <Text style={styles.level}>{level}</Text>
-        </View>
-        <View style={styles.titleGroup}>
-          <View style={styles.languageRow}>
-            {environment && (
-              <>
-                <Text style={styles.environment}>{environment}</Text>
-                <Text style={styles.separator}> - </Text>
-              </>
-            )}
-            <Text style={styles.language}>{language}</Text>
-          </View>
-        </View>
-      </View>
-      <Text style={styles.description}>{description}</Text>
-      <View style={styles.progressWrapper}>
-        <View style={styles.progressBackground} />
-        <View style={styles.progressContainer}>
-          {[0, 1, 2, 3, 4].map((index) => {
-            const project = projectProgress[index];
-            const isCompleted = project?.isCompleted;
-            const taskProgress = project ? project.completedTasks / project.totalTasks : 0;
-            
-            return (
-              <View key={index} style={styles.stepContainer}>
-                <View
+    <View style={[
+      styles.container,
+      isLocked && styles.lockedContainer,
+      isActive && styles.activeContainer,
+    ]}>
+      <TouchableOpacity
+        onPress={handlePress}
+        disabled={isLocked}
+        style={styles.header}
+        activeOpacity={0.7}
+      >
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>{language.name}</Text>
+          <Text style={styles.description}>{description}</Text>
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBar}>
+              <View style={styles.progressLine}>
+                <View 
                   style={[
-                    styles.diamond,
-                    isCompleted ? styles.completedDiamond : 
-                    taskProgress > 0 ? styles.activeDiamond : 
-                    styles.inactiveDiamond,
-                  ]}
+                    styles.progressFill,
+                    { width: `${progressPercentage}%` }
+                  ]} 
                 />
-                {index < 4 && (
-                  <View
-                    style={[
-                      styles.line,
-                      styles.lineBase,
-                      {
-                        backgroundColor: '#E5E5E5',
-                        overflow: 'hidden',
-                      }
-                    ]}
-                  >
+              </View>
+              {projectProgress.map((project, index) => {
+                const isProjectLocked = index > 0 && !project.isCompleted;
+                return (
+                  <View key={project.projectId} style={styles.projectIndicator}>
                     <View
                       style={[
-                        styles.progressLine,
-                        {
-                          width: `${calculateProgressPercentage(index)}%`,
-                          backgroundColor: '#4E7ED1',
-                        }
+                        styles.diamond,
+                        project.isCompleted ? styles.activeDiamond : styles.inactiveDiamond,
                       ]}
                     />
+                    <Text
+                      style={[
+                        styles.projectLabel,
+                        project.isCompleted && styles.activeProjectLabel,
+                      ]}
+                    >
+                      {`مشروع ${index + 1}`}
+                    </Text>
                   </View>
-                )}
-              </View>
-            );
-          })}
+                );
+              })}
+            </View>
+          </View>
         </View>
-        <View style={styles.stepLabels}>
-          <Text style={[styles.stepText, projectProgress[0]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
-            مشروع 1{projectProgress[0]?.completedTasks ? ` (${projectProgress[0].completedTasks}/${projectProgress[0].totalTasks})` : ''}
-          </Text>
-          <Text style={[styles.stepText, projectProgress[1]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
-            مشروع 2{projectProgress[1]?.completedTasks ? ` (${projectProgress[1].completedTasks}/${projectProgress[1].totalTasks})` : ''}
-          </Text>
-          <Text style={[styles.stepText, projectProgress[2]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
-            مشروع 3{projectProgress[2]?.completedTasks ? ` (${projectProgress[2].completedTasks}/${projectProgress[2].totalTasks})` : ''}
-          </Text>
-          <Text style={[styles.stepText, projectProgress[3]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
-            مشروع 4{projectProgress[3]?.completedTasks ? ` (${projectProgress[3].completedTasks}/${projectProgress[3].totalTasks})` : ''}
-          </Text>
-          <Text style={[styles.stepText, projectProgress[4]?.completedTasks > 0 ? styles.activeText : styles.stepText]}>
-            تخرج{projectProgress[4]?.completedTasks ? ` (${projectProgress[4].completedTasks}/${projectProgress[4].totalTasks})` : ''}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      <ScrollView style={styles.projectsContainer}>
+        {language.projects.map((project, index) => {
+          const isProjectLocked = index > 0 && !language.projects[index - 1].isCompleted;
+          const isProjectActive = !isProjectLocked && !project.isCompleted;
+
+          return (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              onPress={() => handleProjectPress(project.id)}
+              isLocked={isProjectLocked}
+              isActive={isProjectActive}
+              languageId={language.id}
+            />
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -162,70 +146,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  levelGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  headerContent: {
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  titleGroup: {
-    alignItems: 'flex-end',
-  },
-  languageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  language: {
+  title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#4E7ED1',
     fontFamily: Platform.select({ web: 'system-ui', default: undefined }),
-  },
-  separator: {
-    fontSize: 28,
-    color: '#666',
-    marginHorizontal: 12,
-    opacity: 0.3,
-    fontWeight: '300',
-  },
-  environment: {
-    fontSize: 28,
-    color: '#666',
-    fontFamily: Platform.select({ web: 'system-ui', default: undefined }),
-    opacity: 0.8,
-    fontWeight: '400',
-  },
-  level: {
-    fontSize: 18,
-    color: '#666',
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    marginRight: 'auto',
-  },
-  deleteButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 1,
-  },
-  deleteIcon: {
-    color: '#666',
-    fontSize: 16,
-    lineHeight: 18,
-    textAlign: 'center',
-    marginTop: -1,
   },
   description: {
     fontSize: 14,
@@ -235,22 +165,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontFamily: Platform.select({ web: 'system-ui', default: undefined }),
   },
-  progressWrapper: {
+  progressContainer: {
     marginTop: 8,
     marginBottom: 12,
     paddingHorizontal: 4,
     position: 'relative',
   },
-  progressBackground: {
-    position: 'absolute',
-    top: 14,
-    left: 24,
-    right: 24,
-    height: 2,
-    backgroundColor: '#E5E5E5',
-    zIndex: 1,
-  },
-  progressContainer: {
+  progressBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -258,7 +179,21 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 2,
   },
-  stepContainer: {
+  progressLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    zIndex: 1,
+  },
+  progressFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    height: '100%',
+    backgroundColor: '#4E7ED1',
+  },
+  projectIndicator: {
     alignItems: 'center',
     justifyContent: 'center',
     width: 20,
@@ -273,52 +208,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     zIndex: 3,
   },
-  completedDiamond: {
+  activeDiamond: {
     backgroundColor: '#E4DB2E',
     borderColor: '#E4DB2E',
-  },
-  activeDiamond: {
-    backgroundColor: '#4E7ED1',
-    borderColor: '#4E7ED1',
   },
   inactiveDiamond: {
     backgroundColor: '#fff',
     borderColor: '#E5E5E5',
   },
-  lineBase: {
-    position: 'absolute',
-    height: 2,
-    left: 20,
-    right: -60,
-    zIndex: 1,
-  },
-  line: {
-    position: 'absolute',
-    height: 2,
-    left: 10,
-    right: -60,
-    zIndex: 1,
-  },
-  progressLine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: '100%',
-  },
-  stepLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginTop: 8,
-  },
-  stepText: {
+  projectLabel: {
     fontSize: 11,
     color: '#666',
     textAlign: 'center',
     minWidth: 45,
   },
-  activeText: {
+  activeProjectLabel: {
     color: '#4E7ED1',
     fontWeight: '500',
+  },
+  projectsContainer: {
+    marginTop: 12,
+  },
+  lockedContainer: {
+    backgroundColor: '#f5f5f5',
+  },
+  activeContainer: {
+    backgroundColor: '#fff',
   },
 });

@@ -110,6 +110,23 @@ class BackendAPI {
     }
   }
 
+  async generateTaskHelp(taskId: string, languageId: string): Promise<string> {
+    try {
+      const response = await this.fetchWithSessionAndBody('/ai/help', {
+        taskId,
+        languageId
+      }, {
+        method: 'POST',
+      });
+
+      const { helpText } = await response.json();
+      return helpText;
+    } catch (error) {
+      console.error('Error generating help:', error);
+      throw new Error('فشل في توليد المساعدة. يرجى المحاولة مرة أخرى.');
+    }
+  }
+
   // // Project endpoints
   // async validateProjectCompletion(projectId: string): Promise<{
   //   isValid: boolean;

@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import ProjectCard from './components/ProjectCard';
+import useAppStore from './store/useAppStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,14 +30,10 @@ type TouchableProps = {
 export default function LanguageJourney() {
   const params = useLocalSearchParams<{ language: string; environment: string }>();
   const router = useRouter();
-  const [projectProgress] = useState([
-    { projectId: 'proj1', completedTasks: 3, totalTasks: 5, isCompleted: false },
-    { projectId: 'proj2', completedTasks: 0, totalTasks: 5, isCompleted: false },
-    { projectId: 'proj3', completedTasks: 0, totalTasks: 5, isCompleted: false },
-    { projectId: 'proj4', completedTasks: 0, totalTasks: 5, isCompleted: false },
-    { projectId: 'proj5', completedTasks: 0, totalTasks: 5, isCompleted: false }
-  ]);
   const [headerHeight, setHeaderHeight] = useState(Platform.OS === 'ios' ? 90 : 70);
+  const language = useAppStore((state) =>
+    state.languages.find((l) => l.name === params.language)
+  );
 
   useEffect(() => {
     const updateLayout = () => {
@@ -49,116 +47,18 @@ export default function LanguageJourney() {
     };
   }, []);
 
-  const handleProjectPress = (projectNumber: number) => {
-    if (projectProgress[projectNumber - 1].completedTasks > 0) {
-      router.push({
-        pathname: "/project-details",
-        params: {
-          projectNumber: projectNumber.toString(),
-          language: params.language || "",
-          environment: params.environment || ""
-        }
-      });
-    }
+  const handleProjectPress = (projectId: string) => {
+    router.push({
+      pathname: "/project-details",
+      params: {
+        projectId,
+        language: params.language || "",
+        environment: params.environment || ""
+      }
+    });
   };
 
-  const TouchableComponent = ({ onPress, children, style, android_ripple }: TouchableProps) => {
-    if (Platform.OS === 'android') {
-      return (
-        <Pressable
-          onPress={onPress}
-          style={style}
-          android_ripple={android_ripple}
-        >
-          {children}
-        </Pressable>
-      );
-    }
-
-    return (
-      <TouchableOpacity
-        onPress={onPress}
-        style={style}
-        activeOpacity={0.7}
-      >
-        {children}
-      </TouchableOpacity>
-    );
-  };
-
-  const renderProject = (projectNumber: number) => {
-    const isActive = projectProgress[projectNumber - 1].completedTasks > 0;
-    
-    if (isActive) {
-      return (
-        <TouchableComponent
-          key={projectNumber}
-          onPress={() => handleProjectPress(projectNumber)}
-          style={styles.touchable}
-          android_ripple={{ 
-            color: 'rgba(78, 126, 209, 0.1)',
-            borderless: false
-          }}
-        >
-          <View style={[styles.projectContainer, projectNumber === 1 ? {} : styles.activeProjectCard]}>
-            {projectNumber === 1 ? (
-              <>
-                <Text style={styles.title}>منظم الرفوف الذكي</Text>
-                <Text style={styles.description}>
-                  في هذا المشروع، ستقوم ببناء منظم رفوف ذكي يساعد في تنظيم وترتيب الكتب والأغراض
-                </Text>
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
-                    <View style={styles.progressLine} />
-                    <View style={[
-                      styles.activeProgressLine,
-                      { width: `${(projectProgress.filter(p => p.completedTasks > 0).length / projectProgress.length) * 100}%` }
-                    ]} />
-                    {[1, 2, 3, 4, 5].map((step) => (
-                      <View key={step} style={styles.progressStep}>
-                        <View
-                          style={[
-                            styles.diamond,
-                            projectProgress[step - 1].completedTasks > 0 ? styles.activeDiamond : styles.inactiveDiamond
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            styles.stepLabel,
-                            projectProgress[step - 1].completedTasks > 0 && styles.activeStepLabel
-                          ]}
-                        >
-                          {step === 5 ? 'تخرج' : `مهمة ${step}`}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </>
-            ) : (
-              <Text style={styles.projectText}>
-                مهمة
-              </Text>
-            )}
-          </View>
-        </TouchableComponent>
-      );
-    }
-
-    return (
-      <View key={projectNumber} style={[styles.projectContainer, styles.lockedProject]}>
-        <View style={styles.lockContainer}>
-          <MaterialIcons 
-            name="lock-outline" 
-            size={24} 
-            color="#666" 
-            style={styles.lockIcon}
-          />
-          <Text style={styles.lockText}>الرجاء اتمام المشروع السابق</Text>
-        </View>
-      </View>
-    );
-  };
+  if (!language) return null;
 
   return (
     <View style={styles.container}>
@@ -189,7 +89,23 @@ export default function LanguageJourney() {
       >
         <View style={styles.content}>
           <View style={styles.projectsContainer}>
-            {[1, 2, 3, 4, 5].map(renderProject)}
+            {language.projects.map((project, index) => {
+              const isLocked = index > 0 && !language.projects[index - 1].isCompleted;
+              const completedTasks = project.tasks.filter(task => task.isCompleted).length;
+              const totalTasks = project.tasks.length;
+              const isActive = completedTasks > 0;
+
+              return (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  onPress={() => handleProjectPress(project.id)}
+                  isLocked={isLocked}
+                  isActive={isActive}
+                  languageId={params.language}
+                />
+              );
+            })}
           </View>
         </View>
       </ScrollView>

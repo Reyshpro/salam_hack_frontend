@@ -153,7 +153,16 @@ export default function App() {
                 learningData.map((lang) => (
                   <LanguageCard
                     key={lang.language.toLowerCase()}
-                    language={lang.language}
+                    language={{
+                      id: lang.language.toLowerCase(),
+                      name: lang.language,
+                      environment: lang.framework || '',
+                      goal: '',
+                      level: lang.level as 'Beginner' | 'Intermediate' | 'Advanced',
+                      projects: [],
+                      progress: 1,
+                      createdAt: new Date().toISOString()
+                    }}
                     level={lang.level}
                     description={lang.description}
                     progress={1} 
@@ -166,7 +175,6 @@ export default function App() {
                     ]}
                     isActive={true}
                     onDelete={() => handleDeleteLanguage(lang.language)}
-                    environment={lang.framework}
                   />
                 ))
               ) : (
