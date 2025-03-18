@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from 'react';
 import LanguageCard from './components/LanguageCard';
 import { storage, Language, Journey } from './utils/storage';
 import { displayLearnings, Learning } from './services/api/test';
+import { backendAPI } from './services/api/backend';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +34,7 @@ export default function App() {
   const params = useLocalSearchParams<{ newJourney?: string }>();
   const [learningData, setLearningData] = useState<Learning[] | null>(null);
 
+  backendAPI.setSession('55');
   // Load saved languages on mount
   useEffect(() => {
     const loadSavedLanguages = async () => {
@@ -51,9 +53,9 @@ export default function App() {
       try {
         // setIsLoading(true);
         // Load learning data
-        const data = await displayLearnings('55');
+        const data = await backendAPI.getLearnings();
         setLearningData(data || null);
-        
+         
         // Load saved languages
         const savedLanguages = await storage.getLanguages();
         setLanguages(savedLanguages);
